@@ -19,6 +19,7 @@ namespace ITGGame.AI
 
 
         public float Mass { get { return mass; } set { mass = value; } }
+        public float Speed { get { return ERigidbody.velocity.magnitude; } }
         public float MaxSpeed { get { return maxSpeed; } set { maxSpeed = value; } }
         public float MaxForce { get { return maxForce; } set { maxForce = value; } }
         public float MaxTurnRate { get { return maxTurnRate; } set { maxTurnRate = value; } }
