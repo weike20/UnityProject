@@ -31,6 +31,7 @@ namespace ITGGame.AI
 
 
         private string uid;
+        private bool tagNeighbor;
         private EntityType entityType = EntityType.Default;
 
         public string UID { get { return uid; } }
@@ -38,6 +39,11 @@ namespace ITGGame.AI
         {
             get { return entityType; }
             set { entityType = value; }
+        }
+        public bool TagNeighbor
+        {
+            get { return tagNeighbor; }
+            set { tagNeighbor = value; }
         }
 
         public virtual void Awake()

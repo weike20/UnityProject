@@ -13,13 +13,13 @@ namespace ITGGame.AI
         [SerializeField]
         private float panicDistanceSq = 5*5;
         [SerializeField]
-        private float decelerationMultiply = 3;
+        private float decelerationMultiply = 0.3f;
         [SerializeField]
-        private float wanderRadius = 1;
+        private float wanderRadius = 1.2f;
         [SerializeField]
-        private float wanderDistance = 1;
+        private float wanderDistance = 2f;
         [SerializeField]
-        private float wanderJitter = 1;
+        private float wanderJitter = 10;
         [SerializeField]
         private float minDetectionBoxLength = 1;
         [SerializeField]
@@ -29,8 +29,43 @@ namespace ITGGame.AI
         [SerializeField]
         private float wayPointSeekDistanceSqr = 3f;
 
+        [SerializeField]
+        public SumingMethod sumingMethod = SumingMethod.Prioritized;
+        [SerializeField]
+        public Deceleration deceleration = Deceleration.Fast;
+
+        [SerializeField]
+        private float weightSeek = 1f;
+        [SerializeField]
+        private float weightFlee = 1f;
+        [SerializeField]
+        private float weightArrive = 1f;
+        [SerializeField]
+        private float weightWander = 1f;
+        [SerializeField]
+        private float weghtCohesion = 1f;
+        [SerializeField]
+        private float weightSeparation = 1f;
+        [SerializeField]
+        private float weightAllignment = 1;
+        [SerializeField]
+        private float weightObstacleAvoidance = 1f;
+        [SerializeField]
+        private float weightFollowPath = 1f;
+        [SerializeField]
+        private float weightPersuit = 1f;
+        [SerializeField]
+        private float weightEvade = 1f;
+        [SerializeField]
+        private float weightInterpose = 1f;
+        [SerializeField]
+        private float weightHide = 1f;
+        [SerializeField]
+        private float weightOffsetPursuit = 1f;
 
         private Vector3 wanderTarget = Vector3.zero;
+        private Vector3 steerForce = Vector3.zero;
+        private int mFlags;
 
         public float PanicDistanceSquare
         {
@@ -42,10 +77,46 @@ namespace ITGGame.AI
             get { return decelerationMultiply; }
             set { decelerationMultiply = value; }
         }
+        public Vector3 TargetPos { get; set; }
+        public Vehicle Agent { get; set; }
         
         public SteeringBehaviours(Vehicle vehicle)
         {
             this.vehicle = vehicle;
+        }
+        public Vector3 Calculate()
+        {
+            steerForce = Vector3.zero;
+
+            switch (sumingMethod)
+            {
+
+                case SumingMethod.WeightedAverage:
+                    steerForce = CalculateWeightedSum();
+                    break;
+                case SumingMethod.Prioritized:
+                    steerForce = CalculatePrioritized();
+                    break;
+                case SumingMethod.Dithered:
+                    steerForce = CalculateDithered();
+                    break;
+
+            }
+            return steerForce;
+
+        }
+        public void TurnOn(BehaviourType behaviour)
+        {
+            mFlags |= (int)behaviour;
+        }
+        public void TurnOff(BehaviourType behaviour)
+        {
+            mFlags ^= (int)behaviour;
+        }
+        public bool On(BehaviourType behaviour)
+        {
+            int value = (int)behaviour;
+            return (value & mFlags) == value;
         }
 
 
@@ -61,7 +132,8 @@ namespace ITGGame.AI
             Vector3 toTarget = targetPos - vehicle.transform.position;
             if(toTarget.sqrMagnitude < panicDistanceSq)
             {
-                result = -Seek(targetPos);
+                Vector3 desiredVelocity = vehicle.MaxSpeed * Vector3.Normalize(vehicle.transform.position - targetPos);
+                result = desiredVelocity - vehicle.ERigidbody.velocity;
             }
             return result;
         }
@@ -70,7 +142,7 @@ namespace ITGGame.AI
         {
             Vector3 toTarget = targetPos - vehicle.transform.position;
             float distance = toTarget.magnitude;
-            if(distance >= 0.1f)
+            if(distance >= 0f)
             {
                 float speed = distance / (decelerationMultiply * (float)deceleration);
                 speed = Mathf.Min(speed, vehicle.MaxSpeed);
@@ -111,9 +183,10 @@ namespace ITGGame.AI
             wanderTarget.Normalize();
             wanderTarget *= wanderRadius;
             Vector3 localTarget = wanderTarget + new Vector3(0, 0, wanderDistance);
-            Vector3 worldTarget = vehicle.transform.TransformVector(localTarget);
+            Vector3 worldTarget = vehicle.transform.TransformPoint(localTarget);
 
             return worldTarget - vehicle.transform.position;
+            
         }
         public Vector3 ObstacleAvoidance(RaycastHit hit,out float boxLength)
         {
@@ -186,16 +259,91 @@ namespace ITGGame.AI
 
         public Vector3 Separation(List<Vehicle> neighbors)
         {
-            return Vector3.zero;
+            Vector3 steerForce = Vector3.zero;
+            neighbors.ForEach(item => 
+            {
+                if(item != vehicle && item.TagNeighbor)
+                {
+                    Vector3 toVehicle = vehicle.transform.position - item.transform.position;
+                    steerForce += toVehicle.normalized / toVehicle.magnitude;
+                }
+            });
+            return steerForce;
         }
         public Vector3 Alignment(List<Vehicle> neightbors)
         {
-            return Vector3.zero;
+            Vector3 averageHeading = Vector3.zero;
+            int neighborsCount = 0;
+            neightbors.ForEach(item => 
+            {
+                if(item != vehicle && item.TagNeighbor)
+                {
+                    averageHeading += item.transform.forward;
+                    ++neighborsCount;
+                }
+            });
+            if(neighborsCount>0)
+            {
+                averageHeading /= neighborsCount;
+                averageHeading -= vehicle.transform.forward;
+            }
+
+            return averageHeading;
         }
         public Vector3 Cohesion(List<Vehicle> neightbors)
         {
+            Vector3 centerOfMass = Vector3.zero;
+            Vector3 steeringForce = Vector3.zero;
+
+            int neighborsCount = 0;
+            neightbors.ForEach(item => 
+            {
+                if (item != vehicle && item.TagNeighbor)
+                {
+                    centerOfMass += item.transform.position;
+                    ++neighborsCount;
+                }
+            });
+
+            if(neighborsCount>0)
+            {
+                centerOfMass /= neighborsCount;
+                steeringForce = Seek(centerOfMass);
+            }
+            return steeringForce;
+        }
+
+        private Vector3 CalculateWeightedSum()
+        {
+            if(On(BehaviourType.Seek))
+                steerForce += Seek(TargetPos) * weightSeek;
+            if(On(BehaviourType.Flee))
+                steerForce += Flee(TargetPos) * weightFlee;
+            if(On(BehaviourType.Arrive))
+                steerForce += Arrive(TargetPos,deceleration) * weightArrive;
+            if (On(BehaviourType.Pursuit))
+                steerForce += Persuit(Agent) * weightPersuit;
+            if (On(BehaviourType.Evade))
+                steerForce += Evade(Agent) * weightEvade;
+            if (On(BehaviourType.Wander))
+                steerForce += Wander() * weightWander;
+//             if(On(BehaviourType.ObstacleAvoidance))
+//                 steerForce += ObstacleAvoidance()
+            if(steerForce.sqrMagnitude >= vehicle.MaxForce*vehicle.MaxForce)
+            {
+                steerForce = steerForce.normalized * vehicle.MaxForce;
+            }
+            return steerForce;
+        }
+        private Vector3 CalculatePrioritized()
+        {
             return Vector3.zero;
         }
+        private Vector3 CalculateDithered()
+        {
+            return Vector3.zero;
+        }
+
     }
 
 }

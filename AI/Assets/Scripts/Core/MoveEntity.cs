@@ -7,8 +7,6 @@ namespace ITGGame.AI
     public abstract class MoveEntity : BaseGameEntity
     {
         [SerializeField]
-        private float mass;
-        [SerializeField]
         private float maxSpeed;
         [SerializeField]
         private float maxForce;
@@ -17,8 +15,6 @@ namespace ITGGame.AI
 
         private Rigidbody eRigidbody;
 
-
-        public float Mass { get { return mass; } set { mass = value; } }
         public float Speed { get { return ERigidbody.velocity.magnitude; } }
         public float MaxSpeed { get { return maxSpeed; } set { maxSpeed = value; } }
         public float MaxForce { get { return maxForce; } set { maxForce = value; } }

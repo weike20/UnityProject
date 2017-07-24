@@ -63,13 +63,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\BaseGameEntity.cs" />
-    <Compile Include="Assets\MoveEntity.cs" />
-    <Compile Include="Assets\Path.cs" />
-    <Compile Include="Assets\SteeringBehaviours.cs" />
-    <Compile Include="Assets\SteeringBehavioursDefine.cs" />
-    <Compile Include="Assets\Vehicle.cs" />
-    <Compile Include="Assets\WayPoint.cs" />
+    <Compile Include="Assets\Scripts\Core\BaseGameEntity.cs" />
+    <Compile Include="Assets\Scripts\Core\MoveEntity.cs" />
+    <Compile Include="Assets\Scripts\Core\Path.cs" />
+    <Compile Include="Assets\Scripts\Core\SpaceTimeBoxWall.cs" />
+    <Compile Include="Assets\Scripts\Core\SteeringBehaviours.cs" />
+    <Compile Include="Assets\Scripts\Core\SteeringBehavioursDefine.cs" />
+    <Compile Include="Assets\Scripts\Core\Vehicle.cs" />
+    <Compile Include="Assets\Scripts\Core\VehicleUtility.cs" />
+    <Compile Include="Assets\Scripts\Core\WayPoint.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2015\UnityVS.CSharp.targets" />
 </Project>
